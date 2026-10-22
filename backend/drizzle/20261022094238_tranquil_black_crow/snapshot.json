@@ -1,0 +1,555 @@
+{
+  "type": "base",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "b6adfd7a-a550-4a6b-8fb7-912b12a191fc",
+  "prevIds": [
+    "00000000-0000-0000-0000-000000000000"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "loan_status"
+      ],
+      "writes": [
+        "s|enum|public.loan_status",
+        "n|enum|public.loan_status",
+        "e|enum|public.loan_status",
+        "n|type|public.loan_status"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "loans"
+      ],
+      "writes": [
+        "s|tbl|public.loans",
+        "n|tbl|public.loans",
+        "e|tbl|public.loans",
+        "n|rel|public.loans",
+        "n|type|public.loans",
+        "n|rel|public.loans_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.loan_status"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "repayments"
+      ],
+      "writes": [
+        "s|tbl|public.repayments",
+        "n|tbl|public.repayments",
+        "e|tbl|public.repayments",
+        "n|rel|public.repayments",
+        "n|type|public.repayments",
+        "n|rel|public.repayments_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "users"
+      ],
+      "writes": [
+        "s|tbl|public.users",
+        "n|tbl|public.users",
+        "e|tbl|public.users",
+        "n|rel|public.users",
+        "n|type|public.users",
+        "n|rel|public.users_pkey",
+        "n|rel|public.users_phone_key"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "loans",
+        "loans_user_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.loans_user_id_idx",
+        "n|idx|public.loans_user_id_idx",
+        "e|idx|public.loans_user_id_idx",
+        "n|rel|public.loans_user_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.loans",
+        "n|sch|public",
+        "n|col|public.loans.user_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "loans",
+        "loans_due_date_idx"
+      ],
+      "writes": [
+        "s|idx|public.loans_due_date_idx",
+        "n|idx|public.loans_due_date_idx",
+        "e|idx|public.loans_due_date_idx",
+        "n|rel|public.loans_due_date_idx"
+      ],
+      "reads": [
+        "n|tbl|public.loans",
+        "n|sch|public",
+        "n|col|public.loans.due_date"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "repayments",
+        "repayments_loan_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.repayments_loan_id_idx",
+        "n|idx|public.repayments_loan_id_idx",
+        "e|idx|public.repayments_loan_id_idx",
+        "n|rel|public.repayments_loan_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.repayments",
+        "n|sch|public",
+        "n|col|public.repayments.loan_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "loans"
+      ],
+      "writes": [
+        "s|fk|public.loans.loans_user_id_users_id_fkey",
+        "n|fk|public.loans.loans_user_id_users_id_fkey",
+        "e|fk|public.loans.loans_user_id_users_id_fkey",
+        "n|con|public.loans.loans_user_id_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.loans",
+        "n|sch|public",
+        "n|tbl|public.users",
+        "n|sch|public",
+        "n|col|public.loans.user_id",
+        "n|col|public.users.id",
+        "e|uniqueness|public.users.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "repayments"
+      ],
+      "writes": [
+        "s|fk|public.repayments.repayments_loan_id_loans_id_fkey",
+        "n|fk|public.repayments.repayments_loan_id_loans_id_fkey",
+        "e|fk|public.repayments.repayments_loan_id_loans_id_fkey",
+        "n|con|public.repayments.repayments_loan_id_loans_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.repayments",
+        "n|sch|public",
+        "n|tbl|public.loans",
+        "n|sch|public",
+        "n|col|public.repayments.loan_id",
+        "n|col|public.loans.id",
+        "e|uniqueness|public.loans.id"
+      ]
+    }
+  ],
+  "ddl": [
+    {
+      "schema": "public",
+      "name": "loans",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "repayments",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "users",
+      "isRlsEnabled": false,
+      "entityType": "tables"
+    },
+    {
+      "schema": "public",
+      "name": "loan_status",
+      "values": [
+        "pending",
+        "repaid"
+      ],
+      "entityType": "enums"
+    },
+    {
+      "schema": "public",
+      "table": "loans",
+      "name": "id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "loans",
+      "name": "user_id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "loans",
+      "name": "friend_name",
+      "type": "varchar(100)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "loans",
+      "name": "amount",
+      "type": "numeric(12,2)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "loans",
+      "name": "due_date",
+      "type": "date",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "loans",
+      "name": "status",
+      "type": "loan_status",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'pending'",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "loans",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "loans",
+      "name": "repaid_at",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "repayments",
+      "name": "id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "repayments",
+      "name": "loan_id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "repayments",
+      "name": "amount",
+      "type": "numeric(12,2)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "repayments",
+      "name": "repaid_at",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "users",
+      "name": "id",
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "users",
+      "name": "phone",
+      "type": "varchar(20)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "users",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "entityType": "columns"
+    },
+    {
+      "schema": "public",
+      "table": "loans",
+      "name": "loans_user_id_idx",
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "entityType": "indexes"
+    },
+    {
+      "schema": "public",
+      "table": "loans",
+      "name": "loans_due_date_idx",
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "due_date",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "entityType": "indexes"
+    },
+    {
+      "schema": "public",
+      "table": "repayments",
+      "name": "repayments_loan_id_idx",
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "loan_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "entityType": "indexes"
+    },
+    {
+      "schema": "public",
+      "table": "loans",
+      "name": "loans_user_id_users_id_fkey",
+      "nameExplicit": false,
+      "columns": [
+        "user_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "users",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "entityType": "fks"
+    },
+    {
+      "schema": "public",
+      "table": "repayments",
+      "name": "repayments_loan_id_loans_id_fkey",
+      "nameExplicit": false,
+      "columns": [
+        "loan_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "loans",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "entityType": "fks"
+    },
+    {
+      "schema": "public",
+      "table": "loans",
+      "name": "loans_pkey",
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "repayments",
+      "name": "repayments_pkey",
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "users",
+      "name": "users_pkey",
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "schema": "public",
+      "table": "users",
+      "name": "users_phone_key",
+      "nameExplicit": false,
+      "columns": [
+        "phone"
+      ],
+      "nullsNotDistinct": false,
+      "entityType": "uniques"
+    }
+  ]
+}
