@@ -4,6 +4,8 @@ import cors from "cors";
 import authRoutes from "./modules/auth/auth.routes.js";
 import { errorMiddleware } from "./common/middleware/error.middleware.js";
 
+import loanRoutes from "./modules/loans/loan.routes.js";
+
 const app = express();
 
 app.disable("x-powered-by");
@@ -19,6 +21,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/loans", loanRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({
