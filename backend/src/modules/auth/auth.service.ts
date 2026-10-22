@@ -1,20 +1,27 @@
 
 import { randomInt } from "node:crypto";
-import jwt from "jsonwebtoken";
-import { eq } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
 
 import { db } from "../../db/index.js";
-import { users } from "../../db/schema.js";
+import { refreshTokens, users } from "../../db/schema.js";
 import { AppError } from "../../common/utils/app-error.js";
+
 import type {
   RequestOtpDto,
   VerifyOtpDto,
 } from "./dto/auth.dto.js";
 
+import {
+  createAccessToken,
+  createRefreshToken,
+  hashRefreshToken,
+  getRefreshTokenExpiry,
+  getAccessTokenLifetimeSeconds,
+} from "./token.service.js";
+
 const OTP_TTL_MS = 5 * 60 * 1000;
 const OTP_COOLDOWN_MS = 30 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
-const JWT_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 type OtpRecord = {
   code: string;
@@ -25,19 +32,7 @@ type OtpRecord = {
 
 const otpStore = new Map<string, OtpRecord>();
 
-function getJwtSecret(): string {
-  const secret = process.env.JWT_SECRET;
-
-  if (!secret || secret.length < 32) {
-    throw new AppError(
-      500,
-      "JWT_SECRET must be configured with at least 32 characters",
-    );
-  }
-
-  return secret;
-}
-
+// Request a development OTP.
 export async function requestOtp(input: RequestOtpDto) {
   if (process.env.NODE_ENV === "production") {
     throw new AppError(
@@ -73,21 +68,22 @@ export async function requestOtp(input: RequestOtpDto) {
   };
 }
 
+// Verify OTP, find or create the user, and issue both tokens.
 export async function verifyOtp(input: VerifyOtpDto) {
   const record = otpStore.get(input.phone);
 
   if (!record) {
-    throw new AppError(400, "Request a new OTP first");
+    throw new AppError(400, "Request a new OTP first.");
   }
 
-  if (Date.now() >= record.expiresAt) {
+  if (Date.now() > record.expiresAt) {
     otpStore.delete(input.phone);
-    throw new AppError(400, "OTP has expired. Request a new one");
+    throw new AppError(400, "OTP has expired. Request a new one.");
   }
 
   if (record.attempts >= MAX_OTP_ATTEMPTS) {
     otpStore.delete(input.phone);
-    throw new AppError(429, "Too many attempts. Request a new OTP");
+    throw new AppError(429, "Too many incorrect OTP attempts.");
   }
 
   if (record.code !== input.otp) {
@@ -95,59 +91,132 @@ export async function verifyOtp(input: VerifyOtpDto) {
 
     if (record.attempts >= MAX_OTP_ATTEMPTS) {
       otpStore.delete(input.phone);
+      throw new AppError(429, "Too many incorrect OTP attempts.");
     }
 
-    throw new AppError(400, "Invalid OTP");
+    throw new AppError(400, "Invalid OTP.");
   }
 
   otpStore.delete(input.phone);
 
-  const existingUsers = await db
+  let [user] = await db
     .select()
     .from(users)
     .where(eq(users.phone, input.phone))
     .limit(1);
 
-  let user = existingUsers[0];
-
   if (!user) {
-    const createdUsers = await db
+    await db
       .insert(users)
       .values({ phone: input.phone })
-      .onConflictDoNothing({ target: users.phone })
-      .returning();
+      .onConflictDoNothing({ target: users.phone });
 
-    user = createdUsers[0];
-
-    if (!user) {
-      const concurrentUsers = await db
-        .select()
-        .from(users)
-        .where(eq(users.phone, input.phone))
-        .limit(1);
-
-      user = concurrentUsers[0];
-    }
+    [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.phone, input.phone))
+      .limit(1);
   }
 
   if (!user) {
-    throw new AppError(500, "Unable to create or retrieve user");
+    throw new AppError(500, "Unable to create or retrieve user.");
   }
 
-  const token = jwt.sign(
-    { sub: user.id },
-    getJwtSecret(),
-    { expiresIn: JWT_TTL_SECONDS },
-  );
+  const accessToken = createAccessToken(user.id);
+  const refreshToken = createRefreshToken();
+
+  await db.insert(refreshTokens).values({
+    userId: user.id,
+    tokenHash: hashRefreshToken(refreshToken),
+    expiresAt: getRefreshTokenExpiry(),
+  });
 
   return {
-    token,
-    tokenType: "Bearer",
-    expiresIn: JWT_TTL_SECONDS,
+    accessToken,
+    refreshToken,
+    tokenType: "Bearer" as const,
+    expiresIn: getAccessTokenLifetimeSeconds(),
     user: {
       id: user.id,
       phone: user.phone,
       createdAt: user.createdAt,
     },
   };
+}
+
+// Rotate the refresh token and issue a new token pair.
+export async function refreshSession(rawToken: string) {
+  if (!rawToken || rawToken.length > 512) {
+    throw new AppError(401, "Invalid or expired refresh token.");
+  }
+
+  const tokenHash = hashRefreshToken(rawToken);
+  const now = new Date();
+
+  return db.transaction(async (tx) => {
+    const [storedToken] = await tx
+      .select()
+      .from(refreshTokens)
+      .where(
+        and(
+          eq(refreshTokens.tokenHash, tokenHash),
+          isNull(refreshTokens.revokedAt),
+          gt(refreshTokens.expiresAt, now),
+        ),
+      )
+      .limit(1);
+
+    if (!storedToken) {
+      throw new AppError(401, "Invalid or expired refresh token.");
+    }
+
+    // Only one concurrent request can revoke this token successfully.
+    const [revoked] = await tx
+      .update(refreshTokens)
+      .set({ revokedAt: now })
+      .where(
+        and(
+          eq(refreshTokens.id, storedToken.id),
+          isNull(refreshTokens.revokedAt),
+          gt(refreshTokens.expiresAt, now),
+        ),
+      )
+      .returning({ id: refreshTokens.id });
+
+    if (!revoked) {
+      throw new AppError(401, "Refresh token has already been used.");
+    }
+
+    const newRefreshToken = createRefreshToken();
+
+    await tx.insert(refreshTokens).values({
+      userId: storedToken.userId,
+      tokenHash: hashRefreshToken(newRefreshToken),
+      expiresAt: getRefreshTokenExpiry(),
+    });
+
+    return {
+      accessToken: createAccessToken(storedToken.userId),
+      refreshToken: newRefreshToken,
+      tokenType: "Bearer" as const,
+      expiresIn: getAccessTokenLifetimeSeconds(),
+    };
+  });
+}
+
+// Revoke the supplied refresh token.
+export async function logoutSession(rawToken: string): Promise<void> {
+  if (!rawToken || rawToken.length > 512) {
+    throw new AppError(400, "A valid refresh token is required.");
+  }
+
+  await db
+    .update(refreshTokens)
+    .set({ revokedAt: new Date() })
+    .where(
+      and(
+        eq(refreshTokens.tokenHash, hashRefreshToken(rawToken)),
+        isNull(refreshTokens.revokedAt),
+      ),
+    );
 }

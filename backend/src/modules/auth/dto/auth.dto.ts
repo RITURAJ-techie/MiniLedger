@@ -16,5 +16,11 @@ export const verifyOtpSchema = z.object({
   otp: z.string().regex(/^\d{6}$/, "OTP must be 6 digits"),
 });
 
+export const refreshTokenSchema = z.object({
+  refreshToken: z.string().min(1).max(512),
+});
+
+export type RefreshTokenDto = z.infer<typeof refreshTokenSchema>;
+
 export type RequestOtpDto = z.infer<typeof requestOtpSchema>;
 export type VerifyOtpDto = z.infer<typeof verifyOtpSchema>;
