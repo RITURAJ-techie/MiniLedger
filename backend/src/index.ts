@@ -1,20 +1,31 @@
-
+import "dotenv/config";
 import app from "./app.js";
-import { env } from "./common/config/env.js";
+import { closeDatabase } from "./db/index.js";
 
-const server = app.listen(env.PORT, () => {
-  console.log(`MiniLedger API running on port ${env.PORT}`);
-  console.log(`Health: http://localhost:${env.PORT}/api/health`);
+const port = Number(process.env.PORT ?? 5000);
+
+const server = app.listen(port, () => {
+  console.log(`MiniLedger API running at http://localhost:${port}`);
 });
 
+let shuttingDown = false;
+
 function shutdown(signal: string) {
-  console.log(`${signal} received. Shutting down server...`);
+  if (shuttingDown) return;
+  shuttingDown = true;
+
+  console.log(`${signal} received. Shutting down...`);
 
   server.close((error) => {
     if (error) {
-      console.error("Server shutdown failed:", error);
+      console.error("HTTP server shutdown failed:", error);
       process.exitCode = 1;
     }
+
+    void closeDatabase().catch((dbError) => {
+      console.error("Database shutdown failed:", dbError);
+      process.exitCode = 1;
+    });
   });
 }
 
