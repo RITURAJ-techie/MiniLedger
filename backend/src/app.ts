@@ -5,7 +5,7 @@ import authRoutes from "./modules/auth/auth.routes.js";
 import { errorMiddleware } from "./common/middleware/error.middleware.js";
 
 import loanRoutes from "./modules/loans/loan.routes.js";
-
+import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
 const app = express();
 
 app.disable("x-powered-by");
@@ -22,6 +22,7 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/loans", loanRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({
