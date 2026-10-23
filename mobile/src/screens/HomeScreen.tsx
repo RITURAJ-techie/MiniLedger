@@ -3,6 +3,8 @@ import {
   Alert,
   Animated,
   Easing,
+  Image,
+  Linking,
   Modal,
   KeyboardAvoidingView,
   Platform,
@@ -23,6 +25,7 @@ import {
 } from "react-native-safe-area-context";
 import { archiveLoan, createLoan, getArchivedLoans, getDashboardSummary, getLoans, repayLoan, restoreLoan } from "../api/ledger.api";
 import type { DashboardSummary, LoanRecord } from "../api/ledger.api";
+import { apiClient } from "../api/client";
 
 /* ------------------------------------------------------------------ */
 /* Data                                                                */
@@ -30,6 +33,10 @@ import type { DashboardSummary, LoanRecord } from "../api/ledger.api";
 
 type HomeScreenProps = {
   userPhone?: string;
+  userName?: string;
+  userEmail?: string;
+  onProfileUpdated: (name: string, email: string) => Promise<void>;
+  onLogout: () => Promise<void>;
 };
 
 type Activity = {
@@ -390,7 +397,7 @@ const ClockIcon = () => (
 /* Screen                                                              */
 /* ------------------------------------------------------------------ */
 
-function HomeScreenContent({ userPhone }: HomeScreenProps) {
+function HomeScreenContent({ userPhone, userName, userEmail, onProfileUpdated, onLogout }: HomeScreenProps) {
   const insets = useSafeAreaInsets();
 
   // Live dashboard data. UI and styles below remain unchanged.
@@ -430,6 +437,84 @@ function HomeScreenContent({ userPhone }: HomeScreenProps) {
   const [notificationsVisible, setNotificationsVisible] = useState(false);
   const [activityVisible, setActivityVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [accountVisible, setAccountVisible] = useState(false);
+  const [aboutVisible, setAboutVisible] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileName, setProfileName] = useState(userName ?? "");
+  const [profileEmail, setProfileEmail] = useState(userEmail ?? "");
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  
+async function handleProfileSave() {
+  const name = profileName.trim().replace(/\s+/g, " ");
+  const email = profileEmail.trim().toLowerCase();
+
+  if (name.length < 2) {
+    Alert.alert("Invalid name", "Please enter your full name.");
+    return;
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    Alert.alert("Invalid email", "Please enter a valid email address.");
+    return;
+  }
+
+  try {
+    setSavingProfile(true);
+
+    // Save through App.tsx so the dashboard receives updated user data
+    await onProfileUpdated(name, email);
+
+    setProfileName(name);
+    setProfileEmail(email);
+    setEditingProfile(false);
+
+    Alert.alert(
+      "Profile updated",
+      "Your profile has been updated successfully."
+    );
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unable to update your profile. Please try again.";
+
+    Alert.alert("Update failed", message);
+  } finally {
+    setSavingProfile(false);
+  }
+}
+
+
+  async function handleLogoutPress() {
+    Alert.alert(
+      "Log out",
+      "Are you sure you want to log out of MiniLedger?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Log out",
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              setLoggingOut(true);
+              try {
+                await onLogout();
+              } catch (error) {
+                Alert.alert(
+                  "Unable to log out",
+                  error instanceof Error ? error.message : "Please try again."
+                );
+              } finally {
+                setLoggingOut(false);
+              }
+            })();
+          },
+        },
+      ]
+    );
+  }
 
   useEffect(() => {
     let active = true;
@@ -806,6 +891,14 @@ function HomeScreenContent({ userPhone }: HomeScreenProps) {
         />
         <View pointerEvents="none" style={styles.glowSide} />
 
+        <Image
+          pointerEvents="none"
+          source={require("../../assets/miniledger-logo.png")}
+          style={styles.backgroundLogo}
+          resizeMode="contain"
+          accessibilityLabel="MiniLedger background"
+        />
+
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={{ paddingBottom: insets.bottom + 28 }}
@@ -814,17 +907,23 @@ function HomeScreenContent({ userPhone }: HomeScreenProps) {
           <View style={styles.content}>
             {/* Header */}
             <View style={styles.header}>
-              <View style={styles.profile}>
+              <Pressable
+                style={styles.profile}
+                onPress={() => setAccountVisible(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Open account and settings"
+              >
+
                 <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>M</Text>
+                  <Text style={styles.avatarText}>{(userName?.trim()?.charAt(0) || "U").toUpperCase()}</Text>
                 </View>
                 <View style={styles.profileText}>
-                  <Text style={styles.name}>MiniLedger</Text>
+                  <Text style={styles.name} numberOfLines={1}>{userName?.trim() || "MiniLedger"}</Text>
                   <Text style={styles.subName} numberOfLines={1}>
                     {userPhone ? `Phone: ${userPhone}` : "Your personal ledger"}
                   </Text>
                 </View>
-              </View>
+              </Pressable>
 
               <View style={styles.headerActions}>
                 <GlowCard
@@ -1402,6 +1501,196 @@ function HomeScreenContent({ userPhone }: HomeScreenProps) {
           </View>
         </View>
       </Modal>
+      <Modal
+        visible={aboutVisible}
+        animationType="slide"
+        onRequestClose={() => setAboutVisible(false)}
+      >
+        <SafeAreaView style={styles.aboutPage}>
+          <View style={styles.aboutHeader}>
+            <Pressable onPress={() => setAboutVisible(false)} style={styles.aboutBackButton} accessibilityRole="button" accessibilityLabel="Back to account settings">
+              <Text style={styles.aboutBackText}>‹</Text>
+            </Pressable>
+            <Text style={styles.aboutHeaderTitle}>About MiniLedger</Text>
+            <View style={styles.aboutHeaderSpacer} />
+          </View>
+          <ScrollView contentContainerStyle={styles.aboutContent} showsVerticalScrollIndicator={false}>
+            <Image
+              source={require("../../assets/miniledger-logo.png")}
+              style={styles.aboutLogo}
+              resizeMode="contain"
+              accessibilityLabel="MiniLedger logo"
+            />
+            <Text style={styles.aboutBrand}>MiniLedger</Text>
+            <Text style={styles.aboutTagline}>Lending made a little simpler.</Text>
+            <View style={styles.aboutInfoCard}>
+              <Text style={styles.aboutSectionTitle}>Your personal lending companion</Text>
+              <Text style={styles.aboutBody}>
+                MiniLedger helps you keep your personal lending organized in one place. Record loans, track repayments, check due dates, review your lending activity, and archive records you no longer need on your main dashboard.
+              </Text>
+              <Text style={styles.aboutSectionTitle}>Designed for clarity</Text>
+              <Text style={styles.aboutBody}>
+                Keep an eye on outstanding amounts and repayment progress, while maintaining a simple overview of the money you have lent.
+              </Text>
+              <Text style={styles.aboutSectionTitle}>Contact</Text>
+              <Text style={styles.aboutBody}>Questions or feedback? Reach us at</Text>
+              <Pressable onPress={() => { void Linking.openURL("mailto:majrituraj@gmail.com?subject=MiniLedger%20Support").catch(() => Alert.alert("Contact Support", "Please email majrituraj@gmail.com.")); }}>
+                <Text style={styles.aboutEmail}>majrituraj@gmail.com</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.aboutFooter}>MiniLedger · Your personal ledger</Text>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      <Modal
+        visible={accountVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAccountVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Account &amp; Settings</Text>
+            <Text style={styles.modalSubtitle}>
+              Manage your MiniLedger account and get help.
+            </Text>
+
+            {editingProfile ? (
+              <>
+                <Text style={styles.fieldLabel}>FULL NAME</Text>
+                <TextInput
+                  value={profileName}
+                  onChangeText={setProfileName}
+                  placeholder="Enter your full name"
+                  placeholderTextColor={C.muted}
+                  autoCapitalize="words"
+                  style={styles.formInput}
+                  editable={!savingProfile}
+                />
+
+                <Text style={[styles.fieldLabel, styles.accountFieldLabel]}>
+                  EMAIL ADDRESS
+                </Text>
+                <TextInput
+                  value={profileEmail}
+                  onChangeText={setProfileEmail}
+                  placeholder="Enter your email"
+                  placeholderTextColor={C.muted}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  style={styles.formInput}
+                  editable={!savingProfile}
+                />
+
+                <Text style={[styles.fieldLabel, styles.accountFieldLabel]}>
+                  REGISTERED PHONE
+                </Text>
+                <Text style={styles.accountValue}>
+                  {userPhone || "Phone number unavailable"}
+                </Text>
+
+                <View style={styles.modalActions}>
+                  <Pressable
+                    onPress={() => {
+                      setProfileName(userName ?? "");
+                      setProfileEmail(userEmail ?? "");
+                      setEditingProfile(false);
+                    }}
+                    disabled={savingProfile}
+                    style={[styles.modalButton, styles.cancelButton]}
+                  >
+                    <Text style={styles.modalButtonText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => void handleProfileSave()}
+                    disabled={savingProfile}
+                    style={[
+                      styles.modalButton,
+                      styles.saveButton,
+                      savingProfile && styles.disabledButton,
+                    ]}
+                  >
+                    <Text style={styles.modalButtonText}>
+                      {savingProfile ? "Saving..." : "Save Changes"}
+                    </Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={styles.fieldLabel}>FULL NAME</Text>
+                <Text style={styles.accountValue}>
+                  {profileName || "Name not provided"}
+                </Text>
+                <Text style={[styles.fieldLabel, styles.accountFieldLabel]}>
+                  EMAIL ADDRESS
+                </Text>
+                <Text style={styles.accountValue}>
+                  {profileEmail || "Email not provided"}
+                </Text>
+                <Text style={[styles.fieldLabel, styles.accountFieldLabel]}>
+                  REGISTERED PHONE
+                </Text>
+                <Text style={styles.accountValue}>
+                  {userPhone || "Phone number unavailable"}
+                </Text>
+                <View style={styles.modalActions}>
+                  <Pressable
+                    onPress={() => setEditingProfile(true)}
+                    style={[styles.modalButton, styles.saveButton]}
+                  >
+                    <Text style={styles.modalButtonText}>Edit Profile</Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
+
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={() => {
+                  setAccountVisible(false);
+                  void Linking.openURL("mailto:majrituraj@gmail.com?subject=MiniLedger%20Support").catch(() => {
+                    Alert.alert("Contact Support", "Please email majrituraj@gmail.com for help with MiniLedger.");
+                  });
+                }}
+                style={[styles.modalButton, styles.cancelButton]}
+              >
+                <Text style={styles.modalButtonText}>Help & Support</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => { setAccountVisible(false); setAboutVisible(true); }}
+                style={[styles.modalButton, styles.cancelButton]}
+              >
+                <Text style={styles.modalButtonText}>About</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={handleLogoutPress}
+                disabled={loggingOut}
+                style={[
+                  styles.modalButton,
+                  styles.cancelButton,
+                  loggingOut && styles.disabledButton,
+                ]}
+              >
+                <Text style={styles.modalButtonText}>
+                  {loggingOut ? "Logging out…" : "Log out"}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setAccountVisible(false)}
+                style={[styles.modalButton, styles.saveButton]}
+              >
+                <Text style={styles.modalButtonText}>Close</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1454,19 +1743,27 @@ const styles = StyleSheet.create({
     minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 8,
+  },
+  backgroundLogo: {
+  position: "absolute",
+  top: 180,
+  right: -65,
+  width: 300,
+  height: 300,
+  opacity: 0.07,
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: "#4A3561",
     borderWidth: 1,
     borderColor: "#8A68A8",
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: { color: "#F5E9FF", fontSize: 18, fontWeight: "700" },
+  avatarText: { color: "#F5E9FF", fontSize: 17, fontWeight: "700" },
   profileText: { flex: 1, minWidth: 0 },
   name: { color: C.text, fontSize: 17, fontWeight: "700" },
   subName: { color: C.muted, fontSize: 12, marginTop: 3 },
@@ -1613,6 +1910,24 @@ const styles = StyleSheet.create({
   calendarTodayAction: { color: "#D8B9FF", fontSize: 14, fontWeight: "700" },
   calendarDoneButton: { paddingHorizontal: 22, paddingVertical: 10, borderRadius: 18, backgroundColor: C.button },
   calendarDoneText: { color: C.text, fontSize: 13, fontWeight: "800" },
+  accountValue: { color: C.text, fontSize: 15, marginTop: 2 },
+  accountFieldLabel: { marginTop: 16 },
+  aboutPage: { flex: 1, backgroundColor: C.bg },
+  aboutHeader: { minHeight: 58, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 18, borderBottomWidth: 1, borderBottomColor: C.cardBorder },
+  aboutBackButton: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBorder },
+  aboutBackText: { color: C.text, fontSize: 32, lineHeight: 35, marginTop: -3 },
+  aboutHeaderTitle: { color: C.text, fontSize: 18, fontWeight: "700" },
+  aboutHeaderSpacer: { width: 40 },
+  aboutContent: { alignItems: "center", paddingHorizontal: 22, paddingTop: 30, paddingBottom: 34 },
+  aboutLogo: { width: 104, height: 104, marginBottom: 12 },
+  aboutBrand: { color: C.text, fontSize: 28, fontWeight: "800", letterSpacing: -0.5 },
+  aboutTagline: { color: C.muted, fontSize: 14, marginTop: 8, marginBottom: 26, textAlign: "center" },
+  aboutInfoCard: { width: "100%", maxWidth: 520, padding: 20, borderRadius: 22, backgroundColor: C.card, borderWidth: 1, borderColor: C.cardBorder },
+  aboutSectionTitle: { color: C.text, fontSize: 16, fontWeight: "700", marginTop: 8, marginBottom: 8 },
+  aboutBody: { color: C.muted, fontSize: 14, lineHeight: 22, marginBottom: 16 },
+  aboutEmail: { color: C.accent, fontSize: 15, fontWeight: "700", marginTop: 4, marginBottom: 8 },
+  aboutFooter: { color: C.faint, fontSize: 12, marginTop: 22 },
+
   modalOverlay: {
     flex: 1,
     justifyContent: "center",
