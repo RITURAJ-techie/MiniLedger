@@ -52,7 +52,8 @@ export const loans = pgTable(
       .defaultNow()
       .notNull(),
 
-    repaidAt: timestamp("repaid_at", { withTimezone: true })
+    repaidAt: timestamp("repaid_at", { withTimezone: true }),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
   },
   (table) => [
     index("loans_user_id_idx").on(table.userId),
