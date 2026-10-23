@@ -8,6 +8,7 @@ import {
   requestOtpSchema,
   verifyOtpSchema,
   refreshTokenSchema,
+  updateProfileSchema,
 } from "./dto/auth.dto.js";
 
 import * as authService from "./auth.service.js";
@@ -68,6 +69,23 @@ export const logoutController = asyncHandler(
     res.status(200).json({
       success: true,
       message: "Logged out successfully.",
+    });
+  },
+);
+
+export const updateProfileController = asyncHandler(
+  async (req: Request, res: Response) => {
+    if (!req.user?.id) {
+      throw new AppError(401, "Authentication required.");
+    }
+
+    const input = updateProfileSchema.parse(req.body);
+    const result = await authService.updateProfile(req.user.id, input);
+
+    res.status(200).json({
+      success: true,
+      data: result,
+      message: "Profile updated successfully.",
     });
   },
 );
