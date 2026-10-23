@@ -8,6 +8,7 @@ import {
   timestamp,
   index,
   uniqueIndex,
+  integer
 } from "drizzle-orm/pg-core";
 
 // Loan lifecycle
@@ -22,9 +23,41 @@ export const users = pgTable(
     name: varchar("name", { length: 100 }),
     email: varchar("email", { length: 254 }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    emailVerifiedAt: timestamp("email_verified_at", {
+  withTimezone: true}),
   },
   (table) => [uniqueIndex("users_email_unique_idx").on(table.email)],
 );
+
+export const registrationChallenges = pgTable(
+  "registration_challenges",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    phone: varchar("phone", { length: 20 }).notNull().unique(),
+    name: varchar("name", { length: 100 }).notNull(),
+    email: varchar("email", { length: 254 }).notNull().unique(),
+
+    phoneVerifiedAt: timestamp("phone_verified_at", {
+      withTimezone: true,
+    }),
+
+    emailOtpHash: varchar("email_otp_hash", { length: 64 }),
+    emailOtpExpiresAt: timestamp("email_otp_expires_at", {
+      withTimezone: true,
+    }),
+    emailOtpAttempts: integer("email_otp_attempts")
+      .notNull()
+      .default(0),
+    emailOtpNextRequestAt: timestamp("email_otp_next_request_at", {
+      withTimezone: true,
+    }),
+
+    createdAt: timestamp("created_at", {
+      withTimezone: true,
+    }).defaultNow().notNull(),
+  },
+);
+
 
 // Money lent to friends
 export const loans = pgTable(

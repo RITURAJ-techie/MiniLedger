@@ -5,18 +5,19 @@ import { AppError } from "../../common/utils/app-error.js";
 import { asyncHandler } from "../../common/utils/async-handler.js";
 
 import {
-  requestOtpSchema,
-  verifyOtpSchema,
+  requestEmailOtpSchema,
+  verifyEmailOtpSchema,
   refreshTokenSchema,
   updateProfileSchema,
+  phoneEmailVerificationSchema,
 } from "./dto/auth.dto.js";
 
 import * as authService from "./auth.service.js";
 
-export const requestOtpController = asyncHandler(
+export const phoneEmailVerificationController = asyncHandler(
   async (req: Request, res: Response) => {
-    const input = requestOtpSchema.parse(req.body);
-    const result = await authService.requestOtp(input);
+    const input = phoneEmailVerificationSchema.parse(req.body);
+    const result = await authService.verifyPhoneEmail(input);
 
     res.status(200).json({
       success: true,
@@ -25,10 +26,22 @@ export const requestOtpController = asyncHandler(
   },
 );
 
-export const verifyOtpController = asyncHandler(
+export const requestEmailOtpController = asyncHandler(
   async (req: Request, res: Response) => {
-    const input = verifyOtpSchema.parse(req.body);
-    const result = await authService.verifyOtp(input);
+    const input = requestEmailOtpSchema.parse(req.body);
+    const result = await authService.requestEmailOtp(input);
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  },
+);
+
+export const verifyEmailOtpController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const input = verifyEmailOtpSchema.parse(req.body);
+    const result = await authService.verifyEmailOtp(input);
 
     res.status(200).json({
       success: true,
