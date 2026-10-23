@@ -65,3 +65,58 @@ export const markLoanRepaidController = asyncHandler(
     });
   },
 );
+
+
+export const archiveLoanController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getAuthenticatedUserId(req);
+    const parsedId = loanIdSchema.safeParse(req.params.id);
+
+    if (!parsedId.success) {
+      throw new AppError(400, "A valid loan ID is required.");
+    }
+
+    const loan = await loanService.archiveLoan(
+      userId,
+      parsedId.data,
+    );
+
+    res.status(200).json({
+      success: true,
+      data: loan,
+    });
+  },
+);
+
+export const restoreLoanController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getAuthenticatedUserId(req);
+    const parsedId = loanIdSchema.safeParse(req.params.id);
+
+    if (!parsedId.success) {
+      throw new AppError(400, "A valid loan ID is required.");
+    }
+
+    const loan = await loanService.restoreLoan(
+      userId,
+      parsedId.data,
+    );
+
+    res.status(200).json({
+      success: true,
+      data: loan,
+    });
+  },
+);
+
+export const getArchivedLoansController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getAuthenticatedUserId(req);
+    const loans = await loanService.getArchivedLoans(userId);
+
+    res.status(200).json({
+      success: true,
+      data: loans,
+    });
+  },
+);
