@@ -16,6 +16,7 @@ import {
 
 interface OtpScreenProps {
   phone: string;
+  channel: "phone" | "email"
   onVerify: (otp: string) => Promise<void>;
   onResend: () => Promise<void>;
   onBack: () => void;
@@ -23,6 +24,7 @@ interface OtpScreenProps {
 
 export default function OtpScreen({
   phone,
+  channel,
   onVerify,
   onResend,
   onBack,
@@ -125,7 +127,14 @@ export default function OtpScreen({
                 MINI<Text style={styles.brandAccent}>LEDGER</Text>
               </Text>
 
-              <Text style={styles.step}>VERIFICATION  ·  02 / 02</Text>
+              
+              <Text style={styles.step}>
+                {channel === "phone"
+                  ? "PHONE VERIFICATION"
+                  : "EMAIL VERIFICATION"}
+                {"  ·  "}
+                {channel === "phone" ? "01 / 02" : "02 / 02"}
+              </Text>
 
               <Text style={styles.title}>
                 One small{"\n"}
@@ -133,8 +142,11 @@ export default function OtpScreen({
               </Text>
 
               <Text style={styles.subtitle}>
-                Enter the six-digit code sent to
+                {channel === "phone"
+                  ? "Enter the six-digit code shown in your backend terminal."
+                  : "Enter the six-digit code sent to your email."}
               </Text>
+
 
               <View style={styles.phoneBadge}>
                 <View style={styles.phoneDot} />
@@ -161,7 +173,7 @@ export default function OtpScreen({
                   }}
                   keyboardType="number-pad"
                   textContentType="oneTimeCode"
-                  autoComplete="sms-otp"
+                  autoComplete={channel === "phone" ? "sms-otp" : "one-time-code"}
                   maxLength={6}
                   editable={!loading}
                   style={styles.otpInput}

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -29,6 +28,7 @@ interface RegisterScreenProps {
     email: string;
     phone: string;
   }) => Promise<void>;
+  onLogin: () => void;
 }
 
 const C = {
@@ -64,6 +64,7 @@ const LockIcon = () => (
 
 export default function RegisterScreen({
   onContinue,
+  onLogin,
 }: RegisterScreenProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -276,10 +277,7 @@ export default function RegisterScreen({
               </View>
 
               <Animated.View
-                style={[
-                  styles.card,
-                  { transform: [{ translateX: shake }] },
-                ]}
+                style={[styles.card, { transform: [{ translateX: shake }] }]}
               >
                 <Text style={styles.cardTitle}>Create your account</Text>
 
@@ -430,9 +428,7 @@ export default function RegisterScreen({
                       <ActivityIndicator color="#FFFFFF" />
                     ) : (
                       <>
-                        <Text style={styles.continueButtonText}>
-                          Continue
-                        </Text>
+                        <Text style={styles.continueButtonText}>Continue</Text>
                         <ArrowIcon />
                       </>
                     )}
@@ -452,6 +448,16 @@ export default function RegisterScreen({
                   A little more clarity. A lot less remembering.
                 </Text>
               </View>
+
+              <Pressable
+                onPress={onLogin}
+                style={styles.signInButton}
+                accessibilityRole="button"
+              >
+                <Text style={styles.signInText}>
+                  Already have an account? Sign in
+                </Text>
+              </Pressable>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -726,5 +732,14 @@ const styles = StyleSheet.create({
     color: C.faint,
     fontSize: 11,
     textAlign: "center",
+  },
+  signInButton: {
+    alignItems: "center",
+    paddingVertical: 16,
+  },
+  signInText: {
+    color: C.accent,
+    fontSize: 13,
+    fontWeight: "600",
   },
 });
