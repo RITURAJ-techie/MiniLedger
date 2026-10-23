@@ -1,5 +1,5 @@
 
-import { and, eq, lt, sql } from "drizzle-orm";
+import { and, eq, isNull, lt, sql } from "drizzle-orm";
 
 import { db } from "../../db/index.js";
 import { loans } from "../../db/schema.js";
@@ -39,11 +39,16 @@ export async function getDashboardSummary(userId: string) {
       `,
     })
     .from(loans)
-    .where(eq(loans.userId, userId));
+    .where(
+      and(
+        eq(loans.userId, userId),
+        isNull(loans.archivedAt),
+      ),
+    );
 
   return {
-  totalLent: summary?.totalLent ?? "0",
-  totalRepaid: summary?.totalRepaid ?? "0",
-  overdueAmount: summary?.overdueAmount ?? "0",
-};
+    totalLent: summary?.totalLent ?? "0",
+    totalRepaid: summary?.totalRepaid ?? "0",
+    overdueAmount: summary?.overdueAmount ?? "0",
+  };
 }

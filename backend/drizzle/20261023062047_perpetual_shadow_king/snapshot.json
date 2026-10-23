@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "7e59db10-ac39-4501-ae4d-4d41bf028ec7",
+  "prevIds": [
+    "1bf2f9bb-7961-4288-afb3-64701522c2e5"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "loans",
+        "archived_at"
+      ],
+      "writes": [
+        "s|col|public.loans.archived_at",
+        "n|col|public.loans.archived_at",
+        "e|col|public.loans.archived_at"
+      ],
+      "reads": [
+        "n|tbl|public.loans",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "loans",
+        "name": "archived_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}
